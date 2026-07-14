@@ -1,0 +1,19 @@
+# Wake-word guard: LLM calls this to stay silent on unaddressed audio.
+idle_do_nothing
+
+# Head + antennas + emotions.
+move_head
+play_emotion
+stop_emotion
+dance
+stop_dance
+lower_antennas
+raise_antennas
+wiggle_antennas
+
+# Camera routed through the vision model — see camera.py in this dir.
+camera
+
+# NOTE: `go_to_sleep` is intentionally NOT listed. llama3.1:8b mis-fires it on
+# ambiguous phrases like "ok, we're good for now", which puts Reachy to sleep
+# unexpectedly. Leave power-off to the physical button or an explicit shell call.

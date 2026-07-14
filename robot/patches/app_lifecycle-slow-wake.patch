@@ -1,0 +1,29 @@
+--- app_lifecycle.py.orig
++++ app_lifecycle.py
+@@ -8,7 +8,7 @@
+ import numpy as np
+ import numpy.typing as npt
+
+-from reachy_mini import ReachyMini
+-from reachy_mini.reachy_mini import SLEEP_HEAD_POSE
++from reachy_mini import ReachyMini
++from reachy_mini.reachy_mini import INIT_ANTENNAS_JOINT_POSITIONS, INIT_HEAD_POSE, SLEEP_HEAD_POSE
+ from reachy_mini.utils.interpolation import distance_between_poses
+ from reachy_mini_conversation_app.tools.core_tools import ToolDependencies
+ from reachy_mini_conversation_app.tools.go_to_sleep import GoToSleep
+@@ -67,7 +67,14 @@
+
+     logger.info("Robot is in sleep pose; running wake-up movement.")
+     try:
+-        robot.wake_up()
++        # Slow 5-second wake to avoid startling humans (was robot.wake_up()).
++        # AppManager left motors disabled after the previous goto_sleep;
++        # re-enable before goto or the goto has no effect.
++        try:
++            robot.enable_motors()
++        except Exception as e:
++            logger.warning("enable_motors before wake failed (may already be enabled): %s", e)
++        robot.goto_target(INIT_HEAD_POSE, antennas=INIT_ANTENNAS_JOINT_POSITIONS, duration=5.0)
+     except Exception as e:
+         logger.error("Failed to run wake-up movement: %s", e)
+         return False

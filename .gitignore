@@ -1,0 +1,15 @@
+# local caches / editors
+.DS_Store
+*.swp
+*.pyc
+__pycache__/
+.venv/
+venv/
+node_modules/
+
+# secrets / local overrides
+.env
+*.local.yaml
+*.local.conf
+kubeconfig
+*.kubeconfig

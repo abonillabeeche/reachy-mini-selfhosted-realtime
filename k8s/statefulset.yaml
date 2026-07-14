@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: reachy-s2s
+  namespace: reachy-s2s
+  labels:
+    app: reachy-s2s
+spec:
+  serviceName: reachy-s2s
+  replicas: 1
+  # Recreate rather than rolling; the WebSocket-holding pod is single-tenant.
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: reachy-s2s
+  template:
+    metadata:
+      labels:
+        app: reachy-s2s
+    spec:
+      # Run under the NVIDIA runtime so the container sees the GPU.
+      # No `nvidia.com/gpu: 1` resource request — that would collide with
+      # any other pod that owns the single GPU (Ollama in our case). On a
+      # single-tenant node this is safe; on a shared node, enable gpu-operator
+      # time-slicing and set `resources.requests: nvidia.com/gpu: 1` instead.
+      runtimeClassName: nvidia
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: s2s
+          # Bake this image once on the node with:
+          #   sudo nerdctl -n k8s.io build -t localhost/reachy-s2s:latest ../image
+          # No registry needed.
+          image: localhost/reachy-s2s:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+            # Chat LLM — must support OpenAI tool calling (VLMs typically don't).
+            - name: LLM_MODEL
+              value: "llama3.1:8b"
+            - name: LLM_BASE_URL
+              value: "http://ollama.ollama.svc.cluster.local:11434/v1"
+            - name: LLM_API_KEY
+              value: "ollama"
+            # TTS: `kokoro` is pure-torch (works on Blackwell); the default
+            # `qwen3` runs qwentts-cpp which lacks sm_120 kernels.
+            - name: TTS
+              value: "kokoro"
+            - name: KOKORO_VOICE
+              value: "af_heart"
+          ports:
+            - name: ws
+              containerPort: 8765
+              protocol: TCP
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /hf-cache
+            - name: dshm
+              mountPath: /dev/shm
+          resources:
+            requests:
+              cpu: "2"
+              memory: 8Gi
+            limits:
+              cpu: "16"
+              memory: 64Gi
+          readinessProbe:
+            tcpSocket:
+              port: 8765
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            tcpSocket:
+              port: 8765
+            initialDelaySeconds: 120
+            periodSeconds: 30
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: hf-cache
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # Requires a StorageClass. See k8s/local-path-provisioner.yaml for a
+        # single-node install; on managed clusters use your provider's default.
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi

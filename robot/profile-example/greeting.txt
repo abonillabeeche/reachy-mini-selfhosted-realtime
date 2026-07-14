@@ -1,0 +1,1 @@
+Greet the user in one short sentence, in character — friendly and a little playful. Vary the wording each time. Do not list your capabilities unless asked.

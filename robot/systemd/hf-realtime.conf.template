@@ -1,0 +1,25 @@
+# Drop-in for /etc/systemd/system/reachy-mini-daemon.service.d/hf-realtime.conf
+#
+# Configures the conversation app to use your self-hosted realtime backend
+# instead of Hugging Face's shared endpoint. The daemon inherits these env
+# vars and passes them to the app subprocess.
+#
+# NOTE: an initial `.env` file at
+#   /venvs/apps_venv/lib/python3.12/site-packages/reachy_mini_conversation_app/.env
+# takes precedence over these systemd env vars (the app calls load_dotenv with
+# override=True). If the app ignores these, overwrite that .env with the same
+# values or delete it.
+
+[Service]
+# Realtime backend: `local` uses HF_REALTIME_WS_URL below; `deployed` uses
+# HuggingFace's shared server (the default when not set).
+Environment=HF_REALTIME_CONNECTION_MODE=local
+Environment=HF_REALTIME_WS_URL=ws://__NODE_IP__:31765/v1/realtime
+
+# Optional: pin the conversation app to a specific profile in
+# /venvs/apps_venv/lib/python3.12/site-packages/reachy_talk_data/profiles/<name>/
+Environment=REACHY_MINI_CUSTOM_PROFILE=my-profile
+
+# Optional: point the hybrid camera.py at your VLM (see robot/profile-example/camera.py)
+Environment=REACHY_VLM_BASE_URL=http://__NODE_IP__:31434/v1
+Environment=REACHY_VLM_MODEL=qwen2.5vl:7b

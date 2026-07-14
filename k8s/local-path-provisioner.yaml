@@ -1,0 +1,12 @@
+# Reference: install Rancher's local-path-provisioner as the default
+# StorageClass. Single-node friendly, zero configuration.
+#
+# On a fresh cluster:
+#   kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.30/deploy/local-path-storage.yaml
+#   kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+#
+# This file is intentionally minimal — the upstream YAML changes over time,
+# so we pin the recommended install command above rather than vendoring it.
+#
+# If you already have a StorageClass (e.g. Longhorn, cloud provider), change
+# `storageClassName` in statefulset.yaml to match and skip this file.
