@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Speak text through Reachy Mini's speaker from a Mac.
-# Bypasses the conversation app entirely — uses the daemon's media API.
-#
+# Speak text through Reachy Mini's speaker from this Mac.
 # Usage: ./say-reachy.sh "hello, I am Reachy"
-#        ROBOT=192.168.1.20:8000 ./say-reachy.sh "hi there"
-#        VOICE=Alex ./say-reachy.sh "custom voice"   # any macOS `say` voice
+#        VOICE=Alex ./say-reachy.sh "hi there"
 set -euo pipefail
 
-ROBOT="${ROBOT:-10.0.0.20:8000}"
+ROBOT="${ROBOT:-10.0.0.154:8000}"
 VOICE="${VOICE:-Samantha}"
 TEXT="${*:-hello from your Mac}"
 
