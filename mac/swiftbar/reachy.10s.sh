@@ -70,7 +70,7 @@ App:    ${APP} (${APP_STATE}) | color=gray disabled=true
 🌅 Wake  | bash="${REACHY_CLI}" param1="wake" refresh=true terminal=false
 🌙 Sleep | bash="${REACHY_CLI}" param1="sleep" refresh=true terminal=false
 ---
-🗣  Speak… | bash="${REACHY_CLI}" param1="say-prompt" refresh=false terminal=false
+🗣 Speak | bash="${REACHY_CLI}" param1="say-prompt" refresh=true terminal=false
 🔇 Mute   | bash="${REACHY_CLI}" param1="mute" refresh=true terminal=false
 🔊 Unmute | bash="${REACHY_CLI}" param1="unmute" refresh=true terminal=false
 ---
