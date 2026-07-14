@@ -28,6 +28,16 @@ case "${1:-}" in
     [ $# -eq 0 ] && { echo "usage: reachy say \"text\""; exit 2; }
     exec "${HERE}/say-reachy.sh" "$@"
     ;;
+  say-prompt)
+    # AppleScript dialog for the SwiftBar menu item.
+    text=$(osascript -e 'try
+      text returned of (display dialog "Say what to Reachy?" default answer "" with title "Reachy — Say" buttons {"Cancel","Speak"} default button "Speak")
+    on error
+      return ""
+    end try' 2>/dev/null || true)
+    [ -z "$text" ] && exit 0
+    exec "${HERE}/say-reachy.sh" "$text"
+    ;;
   status)
     pitch=$(curl -sS --max-time 5 "${BASE}/api/state/present_head_pose" | \
       python3 -c "import sys,json,math; d=json.load(sys.stdin); print(round(math.degrees(d['pitch']),1))")
