@@ -82,10 +82,11 @@ $(
   else
     echo "🎧 Start Listening | bash=\"$LISTEN_TOGGLE\" param1=\"start\" refresh=true terminal=false"
   fi
-  if [ -x "$SEE_TOGGLE" ] && "$SEE_TOGGLE" status 2>/dev/null | grep -q on; then
-    echo "📷 Stop Watching | bash=\"$SEE_TOGGLE\" param1=\"stop\" refresh=true terminal=false color=orange"
-  else
-    echo "📷 Watch Camera | bash=\"$SEE_TOGGLE\" param1=\"start\" refresh=true terminal=false"
+  # Camera view: the daemon locks libcamera exclusively, so live video from
+  # a plain SSH+gst pipeline fights it. Route via the official Reachy Mini
+  # Control desktop app instead — it uses the daemon's WebRTC preview.
+  if [ -d "/Applications/Reachy Mini Control.app" ]; then
+    echo "📷 Open Reachy Camera (Reachy Control) | bash=\"/usr/bin/open\" param1=\"-a\" param2=\"Reachy Mini Control\" refresh=false terminal=false"
   fi
 )
 ---
