@@ -5,6 +5,7 @@
 #   reachy wake              # bring her up (motors, slow head lift, start app)
 #   reachy sleep             # fold down (stop app, motors off)
 #   reachy listen            # live-stream Reachy's mic to this Mac (Ctrl-C to stop)
+#   reachy see               # wake + live-view Reachy's camera on this Mac (Ctrl-C to stop)
 #   reachy say "hello!"      # speak arbitrary text through Reachy's speaker
 #   reachy status            # print motors + head pose + running app
 #   reachy volume 80         # set speaker volume (0-100)
@@ -25,6 +26,7 @@ case "${1:-}" in
   wake)   exec "${HERE}/reachy-wake.sh" ;;
   sleep)  exec "${HERE}/reachy-sleep.sh" ;;
   listen) exec "${HERE}/reachy-listen.sh" ;;
+  see)    exec "${HERE}/reachy-see.sh" ;;
   say)
     shift
     [ $# -eq 0 ] && { echo "usage: reachy say \"text\""; exit 2; }

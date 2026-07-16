@@ -23,9 +23,11 @@ case "${1:-status}" in
       echo "already running (pid $(<"$PID_FILE"))"
       exit 0
     fi
-    # Detach with setsid so we can kill the whole session on stop.
-    # The launched reachy-listen.sh has a trap that restarts the conv app.
-    setsid bash -c "\"$LISTEN\" </dev/null >>\"$LOG_FILE\" 2>&1 & echo \$! > \"$PID_FILE\""
+    # Detach: macOS lacks setsid, so use nohup + disown.
+    # The launched reachy-listen.sh has a trap that re-acquires media on exit.
+    nohup "$LISTEN" </dev/null >>"$LOG_FILE" 2>&1 &
+    echo $! > "$PID_FILE"
+    disown 2>/dev/null || true
     sleep 1
     is_running && echo "listening (pid $(<"$PID_FILE"))" || { echo "failed to start; see $LOG_FILE"; exit 1; }
     ;;
@@ -37,7 +39,9 @@ case "${1:-status}" in
     fi
     pid=$(<"$PID_FILE")
     # SIGINT triggers the trap in reachy-listen.sh (like Ctrl-C).
-    kill -INT -"$pid" 2>/dev/null || kill -INT "$pid" 2>/dev/null || true
+    kill -INT "$pid" 2>/dev/null || true
+    # Also kill children (ssh + play) in case the parent trap misses them.
+    pkill -INT -P "$pid" 2>/dev/null || true
     # Give it up to 8s to clean up (restart conv app takes ~3-5s).
     for _ in 1 2 3 4 5 6 7 8; do
       is_running || break

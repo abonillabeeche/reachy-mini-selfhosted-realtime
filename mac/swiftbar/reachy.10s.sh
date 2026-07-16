@@ -75,15 +75,17 @@ App:    ${APP} (${APP_STATE}) | color=gray disabled=true
 🔊 Unmute | bash="${REACHY_CLI}" param1="unmute" refresh=true terminal=false
 ---
 $(
-  LISTEN_TOGGLE="$(dirname "$0")/../claude/reachy-mini-selfhosted-realtime/mac/reachy-listen-toggle.sh"
-  # Prefer the ~/bin symlink if present, else absolute path.
-  if [ -x "$HOME/bin/reachy-listen-toggle" ]; then
-    LISTEN_TOGGLE="$HOME/bin/reachy-listen-toggle"
-  fi
+  LISTEN_TOGGLE="${HOME}/bin/reachy-listen-toggle"
+  SEE_TOGGLE="${HOME}/bin/reachy-see-toggle"
   if [ -x "$LISTEN_TOGGLE" ] && "$LISTEN_TOGGLE" status 2>/dev/null | grep -q on; then
     echo "🎧 Stop Listening | bash=\"$LISTEN_TOGGLE\" param1=\"stop\" refresh=true terminal=false color=orange"
   else
     echo "🎧 Start Listening | bash=\"$LISTEN_TOGGLE\" param1=\"start\" refresh=true terminal=false"
+  fi
+  if [ -x "$SEE_TOGGLE" ] && "$SEE_TOGGLE" status 2>/dev/null | grep -q on; then
+    echo "📷 Stop Watching | bash=\"$SEE_TOGGLE\" param1=\"stop\" refresh=true terminal=false color=orange"
+  else
+    echo "📷 Watch Camera | bash=\"$SEE_TOGGLE\" param1=\"start\" refresh=true terminal=false"
   fi
 )
 ---
