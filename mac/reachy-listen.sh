@@ -24,23 +24,21 @@ BASE="http://${ROBOT_IP}:8000"
 command -v play >/dev/null || { echo "!! 'play' not found. Install sox: brew install sox"; exit 1; }
 command -v sshpass >/dev/null || { echo "!! sshpass not found. Install: brew install esolitos/ipa/sshpass"; exit 1; }
 
-app_was_running=0
+media_released=0
 if [ "$NOSLEEP" != "1" ]; then
-  # Check + stop the conversation app so it releases the mic
-  app_state=$(curl -sS --max-time 5 "${BASE}/api/apps/current-app-status" | \
-    python3 -c "import sys,json; d=json.load(sys.stdin); print((d or {}).get('state') or '')" 2>/dev/null || echo "")
-  if [ "$app_state" = "running" ]; then
-    app_was_running=1
-    echo "==> Stopping Reachy's conversation app to free the mic …"
-    curl -sS --max-time 15 -X POST "${BASE}/api/apps/stop-current-app" >/dev/null
-    sleep 4
-  fi
+  # The reachy-mini daemon itself opens the mic capture pipeline
+  # (for wobble / VAD) even without an app running. /api/media/release
+  # frees the ALSA device without stopping the daemon or the app.
+  echo "==> Releasing Reachy's mic …"
+  curl -sS --max-time 10 -X POST "${BASE}/api/media/release" >/dev/null
+  media_released=1
+  sleep 2
 fi
 
 restore() {
-  if [ "$app_was_running" = "1" ]; then
-    echo; echo "==> Restarting Reachy's conversation app …"
-    curl -sS --max-time 15 -X POST "${BASE}/api/apps/start-app/reachy_mini_conversation_app" >/dev/null || true
+  if [ "$media_released" = "1" ]; then
+    echo; echo "==> Re-acquiring Reachy's mic …"
+    curl -sS --max-time 10 -X POST "${BASE}/api/media/acquire" >/dev/null || true
   fi
 }
 trap restore EXIT INT TERM
