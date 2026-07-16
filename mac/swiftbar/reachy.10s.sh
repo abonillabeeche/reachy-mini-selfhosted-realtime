@@ -62,6 +62,9 @@ fi
 # --- Menu ---
 cat <<EOF
 ---
+Reachy Mini | color=gray disabled=true size=11
+IP:     ${ROBOT_IP} — copy | bash="/bin/sh" param1="-c" param2="printf '%s' '${ROBOT_IP}' | pbcopy" refresh=false terminal=false
+Daemon: http://${ROBOT_IP}:8000 — open | bash="/usr/bin/open" param1="http://${ROBOT_IP}:8000" refresh=false terminal=false
 Head:   pitch=${PITCH}° | color=gray disabled=true
 Motors: ${MODE} | color=gray disabled=true
 Volume: ${VOL}% | color=gray disabled=true
