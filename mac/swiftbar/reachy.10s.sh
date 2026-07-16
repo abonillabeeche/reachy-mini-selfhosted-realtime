@@ -88,8 +88,9 @@ $(
   # Camera view: the daemon locks libcamera exclusively, so live video from
   # a plain SSH+gst pipeline fights it. Route via the official Reachy Mini
   # Control desktop app instead — it uses the daemon's WebRTC preview.
-  if [ -d "/Applications/Reachy Mini Control.app" ]; then
-    echo "📷 Open Reachy Camera (Reachy Control) | bash=\"/usr/bin/open\" param1=\"-a\" param2=\"Reachy Mini Control\" refresh=false terminal=false"
+  OPEN_CTRL="${HOME}/bin/reachy-open-control"
+  if [ -d "/Applications/Reachy Mini Control.app" ] && [ -x "$OPEN_CTRL" ]; then
+    echo "📷 Open Reachy Control (stops listen, frees mic) | bash=\"$OPEN_CTRL\" refresh=true terminal=false"
   fi
 )
 ---
