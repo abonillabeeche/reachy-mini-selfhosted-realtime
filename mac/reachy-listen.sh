@@ -25,11 +25,28 @@ BASE="http://${ROBOT_IP}:8000"
 command -v play >/dev/null || { echo "!! 'play' not found. Install sox: brew install sox"; exit 1; }
 command -v sshpass >/dev/null || { echo "!! sshpass not found. Install: brew install esolitos/ipa/sshpass"; exit 1; }
 
+rssh() { sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 "${ROBOT_USER}@${ROBOT_IP}" "$@"; }
+
+# Push-to-talk leaves the XMOS mic capture switch muted (nocap). Monitoring
+# needs it ON, so record the current state, unmute for the session, and
+# restore it on exit (so we don't accidentally leave the mic hot for PTT).
+MIC_WAS=$(rssh "amixer -c 0 sget Headset,0 2>/dev/null | grep -oE '\[on\]|\[off\]' | head -1" 2>/dev/null)
+echo "==> Un-muting mic for monitoring …"
+rssh "amixer -c 0 sset Headset,0 cap >/dev/null 2>&1; amixer -c 0 sset Headset,1 cap >/dev/null 2>&1" 2>/dev/null
+
 media_released=0
+app_stopped=0
 if [ "$NOSLEEP" != "1" ]; then
-  # The reachy-mini daemon itself opens the mic capture pipeline
-  # (for wobble / VAD) even without an app running. /api/media/release
-  # frees the ALSA device without stopping the daemon or the app.
+  # The conversation app holds the single mic; a direct arecord fights it and
+  # gets no audio. Stop the app so the mic is free, then release daemon media.
+  APP=$(curl -sS --max-time 5 "${BASE}/api/apps/current-app-status" | \
+    python3 -c "import sys,json; d=json.load(sys.stdin); print((d or {}).get('state') or '')" 2>/dev/null || echo "")
+  if [ "$APP" = "running" ]; then
+    echo "==> Pausing conversation app so the mic is free …"
+    curl -sS --max-time 15 -X POST "${BASE}/api/apps/stop-current-app" >/dev/null
+    app_stopped=1
+    sleep 4
+  fi
   echo "==> Releasing Reachy's mic …"
   curl -sS --max-time 10 -X POST "${BASE}/api/media/release" >/dev/null
   media_released=1
@@ -40,6 +57,15 @@ restore() {
   if [ "$media_released" = "1" ]; then
     echo; echo "==> Re-acquiring Reachy's mic …"
     curl -sS --max-time 10 -X POST "${BASE}/api/media/acquire" >/dev/null || true
+  fi
+  # restore the mic capture switch to whatever it was (muted, for PTT)
+  if [ "$MIC_WAS" = "[off]" ]; then
+    rssh "amixer -c 0 sset Headset,0 nocap >/dev/null 2>&1; amixer -c 0 sset Headset,1 nocap >/dev/null 2>&1" 2>/dev/null
+    echo "==> Mic restored to muted (push-to-talk default)."
+  fi
+  if [ "$app_stopped" = "1" ]; then
+    echo "==> Restarting conversation app …"
+    curl -sS --max-time 15 -X POST "${BASE}/api/apps/start-app/reachy_mini_conversation_app" >/dev/null 2>&1 || true
   fi
 }
 trap restore EXIT INT TERM
