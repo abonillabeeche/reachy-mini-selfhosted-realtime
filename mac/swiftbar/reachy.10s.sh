@@ -117,7 +117,7 @@ $(
     echo "🎙 Mic OFF — tap to talk | bash=\"${REACHY_CLI}\" param1=\"mic\" param2=\"on\" refresh=true terminal=false"
   fi
 )
-⏱ Talk 4s (auto-mute) | bash="${REACHY_CLI}" param1="talk" param2="4" refresh=true terminal=true
+⏱ Talk 4s (countdown) | bash="/opt/homebrew/bin/hs" param1="-c" param2="reachyTalk(4)" refresh=false terminal=false
 ---
 🌅 Wake  | bash="${REACHY_CLI}" param1="wake" refresh=true terminal=false
 🌙 Sleep | bash="${REACHY_CLI}" param1="sleep" refresh=true terminal=false
