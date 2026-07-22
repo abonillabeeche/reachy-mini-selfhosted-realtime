@@ -8,14 +8,23 @@
 #   reachy see               # wake + live-view Reachy's camera on this Mac (Ctrl-C to stop)
 #   reachy say "hello!"      # speak arbitrary text through Reachy's speaker
 #   reachy status            # print motors + head pose + running app
-#   reachy volume 80         # set speaker volume (0-100)
-#   reachy mute              # volume 0
-#   reachy unmute            # volume 100
+#   reachy volume 80         # set external-speaker (DAC) volume (0-100)
+#   reachy mute              # DAC volume 0
+#   reachy unmute            # DAC volume 60
+#   reachy mic on|off|toggle # push-to-talk: gate the mic (stops speaker feedback)
+#   reachy talk [secs]       # timed push-to-talk: mic on for N s, then auto-off
 set -euo pipefail
 
 : "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_USER:=pollen}"
+: "${ROBOT_PASS:=root}"
+# Output now goes through the USB DAC dongle (ALSA card id "Audio_1") into an
+# external speaker. Volume controls target that card, not the daemon's built-in.
+: "${DONGLE_CARD:=Audio_1}"
 BASE="http://${ROBOT_IP}:8000"
 HERE="$(cd "$(dirname "$(readlink "$0" || echo "$0")")" && pwd)"
+
+rssh() { sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 "${ROBOT_USER}@${ROBOT_IP}" "$@"; }
 
 usage() {
   sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
@@ -46,31 +55,54 @@ case "${1:-}" in
     pitch=$(curl -sS --max-time 5 "${BASE}/api/state/present_head_pose" | \
       python3 -c "import sys,json,math; d=json.load(sys.stdin); print(round(math.degrees(d['pitch']),1))")
     mode=$(curl -sS --max-time 5 "${BASE}/api/motors/status" | python3 -c "import sys,json; print(json.load(sys.stdin).get('mode',''))")
-    vol=$(curl -sS --max-time 5 "${BASE}/api/volume/current" | python3 -c "import sys,json; print(json.load(sys.stdin).get('volume',''))")
+    vol=$(rssh "amixer -c ${DONGLE_CARD} sget PCM 2>/dev/null | grep -oE '[0-9]+%' | head -1" 2>/dev/null)
     app=$(curl -sS --max-time 5 "${BASE}/api/apps/current-app-status" | \
       python3 -c "import sys,json; d=json.load(sys.stdin); print((d or {}).get('info',{}).get('name') or '<none>', '(' + ((d or {}).get('state') or '') + ')')")
     echo "Reachy @ ${ROBOT_IP}"
-    echo "  head:   pitch=${pitch}°"
-    echo "  motors: ${mode}"
-    echo "  volume: ${vol}%"
-    echo "  app:    ${app}"
+    echo "  head:      pitch=${pitch}°"
+    echo "  motors:    ${mode}"
+    echo "  spk (DAC): ${vol:-?}   (external speaker path)"
+    echo "  app:       ${app}"
     ;;
   volume)
     lvl="${2:-}"
-    [ -z "$lvl" ] && { echo "usage: reachy volume <0-100>"; exit 2; }
-    curl -sS --max-time 5 -X POST "${BASE}/api/volume/set" \
-      -H "Content-Type: application/json" -d "{\"volume\":${lvl}}"
-    echo
+    [ -z "$lvl" ] && { echo "usage: reachy volume <0-100>  (DAC digital level into the external speaker)"; exit 2; }
+    rssh "amixer -c ${DONGLE_CARD} sset PCM ${lvl}% >/dev/null 2>&1 && sudo alsactl store >/dev/null 2>&1; amixer -c ${DONGLE_CARD} sget PCM | grep -oE '[0-9]+%' | head -1"
     ;;
   mute)
-    curl -sS --max-time 5 -X POST "${BASE}/api/volume/set" \
-      -H "Content-Type: application/json" -d '{"volume":0}'
-    echo
+    rssh "amixer -c ${DONGLE_CARD} sset PCM 0% >/dev/null 2>&1; echo muted"
     ;;
   unmute)
-    curl -sS --max-time 5 -X POST "${BASE}/api/volume/set" \
-      -H "Content-Type: application/json" -d '{"volume":100}'
-    echo
+    rssh "amixer -c ${DONGLE_CARD} sset PCM 60% >/dev/null 2>&1; echo 'unmuted (60%)'"
+    ;;
+  mic)
+    # Push-to-talk gate: mutes/unmutes the XMOS mic capture (card 0) so Reachy
+    # doesn't hear its own voice from the external speaker (feedback).
+    case "${2:-status}" in
+      on)   rssh "amixer -c 0 sset Headset,0 cap >/dev/null 2>&1; amixer -c 0 sset Headset,1 cap >/dev/null 2>&1; echo 'mic ON (listening)'" ;;
+      off)  rssh "amixer -c 0 sset Headset,0 nocap >/dev/null 2>&1; amixer -c 0 sset Headset,1 nocap >/dev/null 2>&1; echo 'mic OFF'" ;;
+      toggle)
+        st=$(rssh "amixer -c 0 sget Headset,0 2>/dev/null | grep -oE '\[on\]|\[off\]' | head -1")
+        if [ "$st" = "[on]" ]; then
+          rssh "amixer -c 0 sset Headset,0 nocap >/dev/null 2>&1; amixer -c 0 sset Headset,1 nocap >/dev/null 2>&1; echo 'mic OFF'"
+        else
+          rssh "amixer -c 0 sset Headset,0 cap >/dev/null 2>&1; amixer -c 0 sset Headset,1 cap >/dev/null 2>&1; echo 'mic ON (listening)'"
+        fi ;;
+      status)
+        st=$(rssh "amixer -c 0 sget Headset,0 2>/dev/null | grep -oE '\[on\]|\[off\]' | head -1")
+        [ "$st" = "[on]" ] && echo "on" || echo "off" ;;
+      *) echo "usage: reachy mic {on|off|toggle|status}"; exit 2 ;;
+    esac
+    ;;
+  talk)
+    # Timed push-to-talk: unmute, let you speak, auto-mute after N seconds
+    # (default 12) so Reachy replies to the speaker without hearing itself.
+    secs="${2:-12}"
+    rssh "amixer -c 0 sset Headset,0 cap >/dev/null 2>&1; amixer -c 0 sset Headset,1 cap >/dev/null 2>&1"
+    echo "🎙  mic ON — speak now (${secs}s)…"
+    sleep "$secs"
+    rssh "amixer -c 0 sset Headset,0 nocap >/dev/null 2>&1; amixer -c 0 sset Headset,1 nocap >/dev/null 2>&1"
+    echo "mic OFF — Reachy will reply."
     ;;
   -h|--help|help|"")
     usage

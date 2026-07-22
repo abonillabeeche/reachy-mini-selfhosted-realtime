@@ -49,15 +49,23 @@ d=json.load(sys.stdin)
 if not d: print('')
 else: print(d.get('state') or '')")
 
-# --- Compose menu-bar title based on posture ---
+# --- mic (push-to-talk) + DAC volume state, one SSH round trip ---
+ROBOT_USER="${ROBOT_USER:-pollen}"
+ROBOT_PASS="${ROBOT_PASS:-root}"
+MICDAC=$(sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=3 "${ROBOT_USER}@${ROBOT_IP}" \
+  "m=\$(amixer -c 0 sget Headset,0 2>/dev/null | grep -oE '\[on\]|\[off\]' | head -1); v=\$(amixer -c Audio_1 sget PCM 2>/dev/null | grep -oE '[0-9]+%' | head -1); echo \"\$m|\$v\"" 2>/dev/null || echo "|")
+MIC_STATE="${MICDAC%|*}"; DAC_VOL="${MICDAC#*|}"
+[ "$MIC_STATE" = "[on]" ] && MIC_TXT="ON (listening)" || MIC_TXT="OFF"
+
+# --- Compose menu-bar title: posture + mic-live indicator ---
 # pitch > 15° ≈ asleep (head folded down)
-awake_icon="🤖"
-sleep_icon="💤"
 if python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > 15 else 1)" "$PITCH" 2>/dev/null; then
-  echo "${sleep_icon} Reachy"
+  icon="💤"
 else
-  echo "${awake_icon} Reachy"
+  icon="🤖"
 fi
+[ "$MIC_STATE" = "[on]" ] && icon="🔴"   # mic hot — overrides
+echo "${icon} Reachy"
 
 # --- Menu ---
 cat <<EOF
@@ -67,15 +75,23 @@ IP:     ${ROBOT_IP} — copy | bash="/bin/sh" param1="-c" param2="printf '%s' '$
 Daemon: http://${ROBOT_IP}:8000 — open | bash="/usr/bin/open" param1="http://${ROBOT_IP}:8000" refresh=false terminal=false
 Head:   pitch=${PITCH}° | color=gray disabled=true
 Motors: ${MODE} | color=gray disabled=true
-Volume: ${VOL}% | color=gray disabled=true
+Speaker (DAC): ${DAC_VOL:-?} | color=gray disabled=true
+Mic:    ${MIC_TXT} | color=gray disabled=true
 App:    ${APP} (${APP_STATE}) | color=gray disabled=true
+---
+$(
+  if [ "$MIC_STATE" = "[on]" ]; then
+    echo "🎙 Mic ON — tap to mute | bash=\"${REACHY_CLI}\" param1=\"mic\" param2=\"off\" refresh=true terminal=false color=red"
+  else
+    echo "🎙 Mic OFF — tap to talk | bash=\"${REACHY_CLI}\" param1=\"mic\" param2=\"on\" refresh=true terminal=false"
+  fi
+)
+⏱ Talk 12s (auto-mute) | bash="${REACHY_CLI}" param1="talk" param2="12" refresh=true terminal=true
 ---
 🌅 Wake  | bash="${REACHY_CLI}" param1="wake" refresh=true terminal=false
 🌙 Sleep | bash="${REACHY_CLI}" param1="sleep" refresh=true terminal=false
 ---
 🗣 Speak | bash="${REACHY_CLI}" param1="say-prompt" refresh=true terminal=false
-🔇 Mute   | bash="${REACHY_CLI}" param1="mute" refresh=true terminal=false
-🔊 Unmute | bash="${REACHY_CLI}" param1="unmute" refresh=true terminal=false
 ---
 $(
   LISTEN_TOGGLE="${HOME}/bin/reachy-listen-toggle"
