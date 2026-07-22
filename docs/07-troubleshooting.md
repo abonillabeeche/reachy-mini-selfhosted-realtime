@@ -209,3 +209,21 @@ curl http://$NODE_IP:31434/api/ps
 
 If sharing the cluster with other users' agents, treat any model you
 didn't pull yourself as belonging to them — unload only after asking.
+
+## Reachy randomly switches accent/language (goes "full Italian")
+
+Kokoro's TTS auto-detects the language of each turn (from the STT result) and
+swaps the whole voice to that language's default (e.g. English→Italian
+`if_sara`, or British `bm_fable` which is also *male*). Mis-detections make
+Reachy flip accent/gender mid-conversation.
+
+There's no "mild accent only" mode — it's all-or-nothing per language. To lock
+Reachy to English (stay on your chosen voice), disable the switch in the s2s
+Kokoro handler:
+
+```
+# in the s2s pod: /pip-site/.../speech_to_speech/TTS/kokoro_handler.py
+# replace:  new_lang_code = WHISPER_LANGUAGE_TO_KOKORO_LANG.get(language_code, self.lang_code)
+# with:     new_lang_code = self.lang_code   # disable language/voice auto-switch
+```
+Then restart the s2s pod. (Two occurrences in the file.)
