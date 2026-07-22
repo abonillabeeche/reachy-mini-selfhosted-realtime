@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Live-view Reachy's camera on a remote Mac.
 # gst-launch on Reachy captures /dev/video0 → jpeg stream → SSH → ffplay on Mac.
 # Ctrl-C to stop; the daemon's media is re-acquired automatically.
@@ -13,10 +14,9 @@
 #   WIDTH=1280 HEIGHT=720 FPS=15 reachy see
 set -euo pipefail
 
-: "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_IP:=10.0.0.20}"
 : "${ROBOT_USER:=pollen}"
-: "${ROBOT_PASS:=root}"
-: "${V4L_DEV:=/dev/video0}"
+: "${ROBOT_PASS:=}"
 : "${WIDTH:=640}"
 : "${HEIGHT:=480}"
 : "${FPS:=15}"
@@ -38,30 +38,28 @@ if [ "$NOWAKE" != "1" ]; then
   sleep 4
 fi
 
-echo "==> Releasing Reachy's media (frees ${V4L_DEV}) …"
-curl -sS --max-time 10 -X POST "${BASE}/api/media/release" >/dev/null
-media_released=1
-sleep 2
-
-restore() {
-  if [ "$media_released" = "1" ]; then
-    echo; echo "==> Re-acquiring Reachy's media …"
-    curl -sS --max-time 10 -X POST "${BASE}/api/media/acquire" >/dev/null || true
-  fi
-}
-trap restore EXIT INT TERM
-
-echo "==> Streaming ${V4L_DEV} @ ${WIDTH}x${HEIGHT}@${FPS}fps — close the window or Ctrl-C to stop."
+echo "==> Streaming Reachy camera @ ${WIDTH}x${HEIGHT}@${FPS}fps — close the window or Ctrl-C to stop."
 echo
 
-# gst on Reachy: v4l2 → convert → resize → jpeg → multipart mjpeg over stdout.
-# ffplay reads the MJPEG stream from stdin.
+# On Reachy: PipeWire owns the camera (multi-consumer). Use `pipewiresrc` so
+# we join the shared stream instead of fighting for exclusive /dev/videoX.
+# Kill any leftover gst-launch from a prior failed run first.
+#
+# One-liner over SSH: kill stale, then start gst pipeline that emits MJPEG.
 sshpass -p "$ROBOT_PASS" \
   ssh -o StrictHostKeyChecking=accept-new -C \
   "${ROBOT_USER}@${ROBOT_IP}" \
-  "gst-launch-1.0 -q v4l2src device=${V4L_DEV} ! \
-   video/x-raw,width=${WIDTH},height=${HEIGHT},framerate=${FPS}/1 ! \
-   videoconvert ! jpegenc quality=${QUALITY} ! \
-   multipartmux boundary=frame ! fdsink" \
+  "pkill -f 'gst-launch-1.0.*jpegenc' 2>/dev/null; \
+   sleep 1; \
+   gst-launch-1.0 -q pipewiresrc ! \
+     videoconvert ! videoscale ! \
+     video/x-raw,width=${WIDTH},height=${HEIGHT} ! \
+     videorate ! video/x-raw,framerate=${FPS}/1 ! \
+     jpegenc quality=${QUALITY} ! \
+     fdsink sync=false" \
   | ffplay -hide_banner -loglevel warning -window_title "Reachy camera" \
-           -f mjpeg -framerate "${FPS}" -i pipe:0
+           -f image2pipe -vcodec mjpeg -framerate "${FPS}" \
+           -video_size "${WIDTH}x${HEIGHT}" \
+           -analyzeduration 10M -probesize 10M \
+           -fflags nobuffer -flags low_delay \
+           -i pipe:0

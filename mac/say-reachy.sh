@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Speak text through Reachy Mini's speaker from this Mac.
 # Usage: ./say-reachy.sh "hello, I am Reachy"
 #        VOICE=Alex ./say-reachy.sh "hi there"
 set -euo pipefail
 
-ROBOT="${ROBOT:-10.0.0.154:8000}"
+ROBOT="${ROBOT:-10.0.0.20:8000}"
 VOICE="${VOICE:-Samantha}"
 TEXT="${*:-hello from your Mac}"
 

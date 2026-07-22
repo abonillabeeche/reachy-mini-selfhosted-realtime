@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # SwiftBar plugin — Reachy Mini live status + quick actions.
 #
 # Install:
@@ -9,7 +10,7 @@
 #   4. chmod +x ~/Documents/SwiftBar/reachy.10s.sh
 #
 # Environment overrides (edit here or set globally in SwiftBar's app settings):
-: "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_IP:=10.0.0.20}"
 : "${REACHY_CLI:=$HOME/bin/reachy}"
 
 # <xbar.title>Reachy Mini</xbar.title>
@@ -51,7 +52,7 @@ else: print(d.get('state') or '')")
 
 # --- mic (push-to-talk) + DAC volume state, one SSH round trip ---
 ROBOT_USER="${ROBOT_USER:-pollen}"
-ROBOT_PASS="${ROBOT_PASS:-root}"
+ROBOT_PASS="${ROBOT_PASS:-}"
 APPDIR="/venvs/apps_venv/lib/python3.12/site-packages/reachy_mini_conversation_app"
 PROFDIR="/venvs/apps_venv/lib/python3.12/site-packages/reachy_talk_data/profiles"
 STATE=$(sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=3 "${ROBOT_USER}@${ROBOT_IP}" \
@@ -116,7 +117,7 @@ $(
     echo "🎙 Mic OFF — tap to talk | bash=\"${REACHY_CLI}\" param1=\"mic\" param2=\"on\" refresh=true terminal=false"
   fi
 )
-⏱ Talk 12s (auto-mute) | bash="${REACHY_CLI}" param1="talk" param2="12" refresh=true terminal=true
+⏱ Talk 4s (auto-mute) | bash="${REACHY_CLI}" param1="talk" param2="4" refresh=true terminal=true
 ---
 🌅 Wake  | bash="${REACHY_CLI}" param1="wake" refresh=true terminal=false
 🌙 Sleep | bash="${REACHY_CLI}" param1="sleep" refresh=true terminal=false

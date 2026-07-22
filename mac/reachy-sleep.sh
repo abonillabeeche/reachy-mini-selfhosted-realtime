@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Put Reachy fully to sleep: stops the conversation app, which triggers its
 # shutdown sequence (goto_sleep → motor disable). Head folds down, no more
 # wobbles / idle animations / head tracking.
@@ -7,7 +8,7 @@
 #        ROBOT_IP=192.168.1.20 ./reachy-sleep.sh
 set -euo pipefail
 
-: "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_IP:=10.0.0.20}"
 BASE="http://${ROBOT_IP}:8000"
 
 echo "==> Checking Reachy at ${ROBOT_IP} …"

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Toggle helper for the SwiftBar plugin.
 #   reachy-listen-toggle start   → launch reachy-listen in the background
 #   reachy-listen-toggle stop    → kill any running listen session (cleans up + restarts app)

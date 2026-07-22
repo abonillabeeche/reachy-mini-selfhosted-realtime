@@ -9,7 +9,18 @@
 -- and an SSH ControlMaster host "reachy-mini-ptt" (see ~/.ssh/config) so the
 -- mic toggle is near-instant.
 
-local ROBOT_PASS = "root"           -- robot SSH password
+-- Read robot SSH password from git-ignored ~/.config/reachy/env (ROBOT_PASS=...)
+local function readRobotPass()
+  local h = os.getenv("HOME")
+  local fp = io.open(h .. "/.config/reachy/env", "r")
+  if not fp then return "" end
+  for line in fp:lines() do
+    local v = line:match("^%s*ROBOT_PASS=(.+)%s*$")
+    if v then v = v:gsub('^"',''):gsub('"$',''); fp:close(); return v end
+  end
+  fp:close(); return ""
+end
+local ROBOT_PASS = readRobotPass()   -- from ~/.config/reachy/env, not hardcoded
 local SSH_HOST   = "reachy-mini-ptt" -- ControlMaster alias in ~/.ssh/config
 local MIC_ON  = "amixer -c 0 sset Headset,0 cap >/dev/null 2>&1; amixer -c 0 sset Headset,1 cap >/dev/null 2>&1"
 local MIC_OFF = "amixer -c 0 sset Headset,0 nocap >/dev/null 2>&1; amixer -c 0 sset Headset,1 nocap >/dev/null 2>&1"

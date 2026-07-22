@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Live-listen to Reachy's microphone from a remote Mac.
 # Streams raw PCM over SSH → local `play` (from sox). Ctrl-C to stop.
 #
@@ -10,9 +11,9 @@
 #   ROBOT_IP=192.168.1.20 ./reachy-listen.sh
 set -euo pipefail
 
-: "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_IP:=10.0.0.20}"
 : "${ROBOT_USER:=pollen}"
-: "${ROBOT_PASS:=root}"
+: "${ROBOT_PASS:=}"
 : "${NOSLEEP:=0}"
 : "${ALSA_DEV:=plughw:0,0}"   # Reachy Mini Audio (card 0)
 : "${RATE:=48000}"

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Wake Reachy: enables motors, smoothly lifts head to neutral over 5s, then
 # starts the conversation app (which sees she's already awake and skips its
 # own wake-up sequence — so no double-motion).
@@ -8,7 +9,7 @@
 #        VOLUME=80 ./reachy-wake.sh    # override speaker level after wake
 set -euo pipefail
 
-: "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_IP:=10.0.0.20}"
 : "${VOLUME:=100}"
 : "${APP:=reachy_mini_conversation_app}"
 BASE="http://${ROBOT_IP}:8000"

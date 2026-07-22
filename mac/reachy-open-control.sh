@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # Launch the Reachy Mini Control desktop app cleanly:
 #   - Stop any active `reachy listen` session (frees our SSH grab of the mic)
 #   - Release the daemon's media (so the app's WebRTC can grab mic+cam)
@@ -7,7 +8,7 @@
 # Usage: reachy-open-control [--no-release]
 set -euo pipefail
 
-: "${ROBOT_IP:=10.0.0.154}"
+: "${ROBOT_IP:=10.0.0.20}"
 BASE="http://${ROBOT_IP}:8000"
 
 # 1. If our listen toggle is running, stop it — it holds Reachy's mic over SSH.

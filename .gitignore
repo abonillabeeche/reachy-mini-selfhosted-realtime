@@ -13,3 +13,6 @@ node_modules/
 *.local.conf
 kubeconfig
 *.kubeconfig
+
+# local runtime config (real IP/password live here, never committed)
+# ~/.config/reachy/env

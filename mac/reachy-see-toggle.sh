@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
 # SwiftBar toggle for `reachy see`. Mirrors reachy-listen-toggle.sh.
 set -euo pipefail
 

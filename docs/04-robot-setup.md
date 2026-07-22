@@ -27,7 +27,7 @@ That script:
 
 ```bash
 # Restart the daemon (picks up new env vars):
-sshpass -p root ssh pollen@$ROBOT_IP 'sudo systemctl restart reachy-mini-daemon.service'
+sshpass -p "$ROBOT_PASS" ssh pollen@$ROBOT_IP 'sudo systemctl restart reachy-mini-daemon.service'
 
 # Or restart just the conversation app (faster; env is already loaded):
 curl -X POST http://$ROBOT_IP:8000/api/apps/restart-current-app
@@ -39,7 +39,7 @@ Tail the daemon log and confirm the session is initialized against your
 backend and profile:
 
 ```bash
-sshpass -p root ssh pollen@$ROBOT_IP \
+sshpass -p "$ROBOT_PASS" ssh pollen@$ROBOT_IP \
   'sudo journalctl -u reachy-mini-daemon.service --since "30s ago" -f' \
   | grep -E 'profile=|voice=|realtime session initialized|WebSocket'
 ```
@@ -76,7 +76,7 @@ The install script doesn't patch this because it depends on which Kokoro
 voice you want. To use `af_heart` (default in our StatefulSet):
 
 ```bash
-sshpass -p root ssh pollen@$ROBOT_IP 'sudo python3 -c "
+sshpass -p "$ROBOT_PASS" ssh pollen@$ROBOT_IP 'sudo python3 -c "
 p = \"/venvs/apps_venv/lib/python3.12/site-packages/reachy_mini_conversation_app/config.py\"
 src = open(p).read()
 if \"af_heart\" not in src:
@@ -88,7 +88,7 @@ if \"af_heart\" not in src:
 "'
 
 # Set the startup voice:
-sshpass -p root ssh pollen@$ROBOT_IP 'echo "{\"profile\": \"'"$PROFILE"'\", \"voice\": \"af_heart\"}" | \
+sshpass -p "$ROBOT_PASS" ssh pollen@$ROBOT_IP 'echo "{\"profile\": \"'"$PROFILE"'\", \"voice\": \"af_heart\"}" | \
   sudo tee /venvs/apps_venv/lib/python3.12/site-packages/reachy_mini_conversation_app/startup_settings.json'
 ```
 

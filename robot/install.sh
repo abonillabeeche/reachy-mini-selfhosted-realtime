@@ -11,7 +11,10 @@ set -euo pipefail
 : "${ROBOT_IP:?set ROBOT_IP (e.g. 10.0.0.20)}"
 : "${NODE_IP:?set NODE_IP (LAN IP of the GPU node running s2s + Ollama)}"
 : "${ROBOT_USER:=pollen}"
-: "${ROBOT_PASS:=root}"
+# No baked-in password. Set ROBOT_PASS in your env (or ~/.config/reachy/env).
+# Pollen's FACTORY DEFAULT on a fresh Reachy Mini Wireless is "root" — change it.
+[ -f "$HOME/.config/reachy/env" ] && . "$HOME/.config/reachy/env"
+: "${ROBOT_PASS:?set ROBOT_PASS (factory default is 'root' on a fresh unit — then change it)}"
 : "${PROFILE:=my-profile}"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
