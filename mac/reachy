@@ -94,6 +94,30 @@ case "${1:-}" in
       *) echo "usage: reachy mic {on|off|toggle|status}"; exit 2 ;;
     esac
     ;;
+  profile)
+    APPDIR=/venvs/apps_venv/lib/python3.12/site-packages/reachy_mini_conversation_app
+    PROFDIR=/venvs/apps_venv/lib/python3.12/site-packages/reachy_talk_data/profiles
+    name="${2:-}"
+    if [ -z "$name" ]; then
+      # list available + current
+      cur=$(rssh "grep -oE '\"profile\": *\"[^\"]*\"' $APPDIR/startup_settings.json 2>/dev/null | sed -E 's/.*\"([^\"]*)\"$/\1/'")
+      echo "current: ${cur:-default}"
+      echo "available:"
+      rssh "ls -1 $PROFDIR 2>/dev/null | grep -vE '__pycache__'" | sed 's/^/  /'
+      exit 0
+    fi
+    echo "switching to profile: $name"
+    rssh "sudo sed -i 's/REACHY_MINI_CUSTOM_PROFILE=[a-zA-Z0-9_-]*/REACHY_MINI_CUSTOM_PROFILE=${name}/' /etc/systemd/system/reachy-mini-daemon.service.d/hf-realtime.conf 2>/dev/null; \
+          sudo sed -i 's/REACHY_MINI_CUSTOM_PROFILE=[a-zA-Z0-9_-]*/REACHY_MINI_CUSTOM_PROFILE=${name}/' $APPDIR/.env 2>/dev/null; \
+          v=\$(grep -oE '\"voice\": *\"[^\"]*\"' $APPDIR/startup_settings.json 2>/dev/null | sed -E 's/.*\"([^\"]*)\"\$/\1/'); v=\${v:-af_nova}; \
+          echo \"{\\\"profile\\\": \\\"${name}\\\", \\\"voice\\\": \\\"\$v\\\"}\" | sudo tee $APPDIR/startup_settings.json >/dev/null; \
+          sudo systemctl daemon-reload"
+    curl -sS --max-time 15 -X POST "${BASE}/api/apps/restart-current-app" >/dev/null 2>&1
+    sleep 12
+    # restart resets DAC + we keep mic muted for push-to-talk
+    rssh "amixer -c ${DONGLE_CARD} sset PCM 90% >/dev/null 2>&1; amixer -c 0 sset Headset,0 nocap >/dev/null 2>&1; amixer -c 0 sset Headset,1 nocap >/dev/null 2>&1" 2>/dev/null
+    echo "switched to '${name}' (app restarted, DAC 90%, mic muted for PTT)"
+    ;;
   talk)
     # Timed push-to-talk: unmute, let you speak, auto-mute after N seconds
     # (default 12) so Reachy replies to the speaker without hearing itself.

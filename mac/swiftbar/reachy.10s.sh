@@ -52,10 +52,36 @@ else: print(d.get('state') or '')")
 # --- mic (push-to-talk) + DAC volume state, one SSH round trip ---
 ROBOT_USER="${ROBOT_USER:-pollen}"
 ROBOT_PASS="${ROBOT_PASS:-root}"
-MICDAC=$(sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=3 "${ROBOT_USER}@${ROBOT_IP}" \
-  "m=\$(amixer -c 0 sget Headset,0 2>/dev/null | grep -oE '\[on\]|\[off\]' | head -1); v=\$(amixer -c Audio_1 sget PCM 2>/dev/null | grep -oE '[0-9]+%' | head -1); echo \"\$m|\$v\"" 2>/dev/null || echo "|")
-MIC_STATE="${MICDAC%|*}"; DAC_VOL="${MICDAC#*|}"
+APPDIR="/venvs/apps_venv/lib/python3.12/site-packages/reachy_mini_conversation_app"
+PROFDIR="/venvs/apps_venv/lib/python3.12/site-packages/reachy_talk_data/profiles"
+STATE=$(sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=3 "${ROBOT_USER}@${ROBOT_IP}" \
+  "m=\$(amixer -c 0 sget Headset,0 2>/dev/null | grep -oE '\[on\]|\[off\]' | head -1); \
+   v=\$(amixer -c Audio_1 sget PCM 2>/dev/null | grep -oE '[0-9]+%' | head -1); \
+   p=\$(grep -oE '\"profile\": *\"[^\"]*\"' ${APPDIR}/startup_settings.json 2>/dev/null | sed -E 's/.*\"([^\"]*)\"\$/\1/'); \
+   echo \"\$m|\$v|\$p\"" 2>/dev/null || echo "||")
+MIC_STATE="${STATE%%|*}"; rest="${STATE#*|}"; DAC_VOL="${rest%%|*}"; CUR_PROF="${rest#*|}"
 [ "$MIC_STATE" = "[on]" ] && MIC_TXT="ON (listening)" || MIC_TXT="OFF"
+[ -z "$CUR_PROF" ] && CUR_PROF="default"
+# Featured profiles (custom first); the rest listed after.
+FEATURED="upbeat suse"
+
+# Build the personality submenu lines (no `case` — its ')' breaks $() in heredocs)
+ALL_PROFILES=$(sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=3 "${ROBOT_USER}@${ROBOT_IP}" "ls -1 ${PROFDIR} 2>/dev/null | grep -vE '__pycache__'" 2>/dev/null)
+PERSONALITY_MENU=""
+_emit_prof() {
+  local p="$1"
+  if [ "$p" = "$CUR_PROF" ]; then
+    PERSONALITY_MENU="${PERSONALITY_MENU}--✓ ${p} (active) | color=green refresh=false terminal=false"$'\n'
+  else
+    PERSONALITY_MENU="${PERSONALITY_MENU}--${p} | bash=\"${REACHY_CLI}\" param1=\"profile\" param2=\"${p}\" refresh=true terminal=true"$'\n'
+  fi
+}
+for p in $FEATURED; do _emit_prof "$p"; done
+PERSONALITY_MENU="${PERSONALITY_MENU}-----"$'\n'
+for p in $ALL_PROFILES; do
+  echo "$FEATURED" | grep -qw "$p" && continue
+  _emit_prof "$p"
+done
 
 # --- Compose menu-bar title: posture + mic-live indicator ---
 # pitch > 15° ≈ asleep (head folded down)
@@ -77,7 +103,11 @@ Head:   pitch=${PITCH}° | color=gray disabled=true
 Motors: ${MODE} | color=gray disabled=true
 Speaker (DAC): ${DAC_VOL:-?} | color=gray disabled=true
 Mic:    ${MIC_TXT} | color=gray disabled=true
+Personality: ${CUR_PROF} | color=gray disabled=true
 App:    ${APP} (${APP_STATE}) | color=gray disabled=true
+---
+🎭 Personality: ${CUR_PROF} | color=gray
+${PERSONALITY_MENU}
 ---
 $(
   if [ "$MIC_STATE" = "[on]" ]; then
