@@ -8,6 +8,17 @@
 #   reachy listen            # live-stream Reachy's mic to this Mac (Ctrl-C to stop)
 #   reachy see               # wake + live-view Reachy's camera on this Mac (Ctrl-C to stop)
 #   reachy say "hello!"      # speak arbitrary text through Reachy's speaker
+#   reachy whisper "psst"    # whisper text (soft macOS Whisper voice)
+#   reachy dance             # one random dance (silent motion)
+#   reachy dance-long        # a longer routine of several dances back-to-back
+#   reachy waddle            # side-to-side penguin waddle
+#   reachy sing              # short medley of Reachy's own chirps/whistles + motion
+#   reachy sing-long         # a longer sing medley
+#   reachy stayin-alive      # whistle "Stayin' Alive" (with the dance)
+#   reachy kill-bill         # whistle "Kill Bill" (with the dance)
+#   reachy emotion [name]    # play an emotion (motion + her own audio); random if none
+#   reachy happy [start|stop|toggle|status]  # silent random background moves (~10-20s)
+#   reachy test              # run the self-test suite (motion + audio + happy)
 #   reachy status            # print motors + head pose + running app
 #   reachy volume 80         # set external-speaker (DAC) volume (0-100)
 #   reachy mute              # DAC volume 0
@@ -27,9 +38,72 @@ HERE="$(cd "$(dirname "$(readlink "$0" || echo "$0")")" && pwd)"
 
 rssh() { sshpass -p "$ROBOT_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 "${ROBOT_USER}@${ROBOT_IP}" "$@"; }
 
+DANCES="pollen-robotics/reachy-mini-dances-library"
+EMOTIONS="pollen-robotics/reachy-mini-emotions-library"
+
+# All dances (silent motion). Used by dance / dance-long / waddle.
+DANCE_MOVES=(
+  yeah_nod chin_lead dizzy_spin neck_recoil pendulum_swing interwoven_spirals
+  sharp_side_tilt polyrhythm_combo side_to_side_sway side_glance_flick
+  chicken_peck simple_nod side_peekaboo stumble_and_recover groovy_sway_and_roll
+  grid_snap jackson_square head_tilt_roll uh_huh_tilt
+)
+
+# Upbeat emotions that carry Reachy's own audio (chirps / whistles / "oh-ohh").
+# Used by sing / sing-long.
+SING_MOVES=(
+  cheerful1 enthusiastic1 enthusiastic2 laughing1 laughing2 amazed1 proud1
+  proud2 success1 success2 welcoming1 welcoming2 grateful1 loving1 dance1
+  dance2 dance3 yes1 no_excited1 curious1 relief1 serenity1
+)
+
 usage() {
-  sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,27p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
+}
+
+# Enable motors, then play a recorded move. Args: <dataset> <move_name>
+play_move() {
+  curl -sS --max-time 5 -X POST "${BASE}/api/motors/set_mode/enabled" >/dev/null 2>&1 || true
+  curl -sS --max-time 10 -X POST \
+    "${BASE}/api/move/play/recorded-move-dataset/${1}/${2}" >/dev/null 2>&1 || true
+}
+
+# Block until no move is running (or ~15s timeout) so moves can be chained.
+wait_move_done() {
+  local n
+  for _ in $(seq 1 15); do
+    n=$(curl -sS --max-time 4 "${BASE}/api/move/running" 2>/dev/null | \
+      python3 -c "import sys,json; print(len(json.load(sys.stdin) or []))" 2>/dev/null || echo 0)
+    [ "$n" = "0" ] && return 0
+    sleep 1
+  done
+}
+
+# Play <count> random moves from the remaining args, chained end-to-end.
+# Args: <dataset> <count> <move_name...>
+# Paced so each move's motion *and* its sidecar audio land: wait for the robot
+# to be free BEFORE playing (else play_move is silently ignored), confirm the
+# move actually started, wait for it to finish, then a short breath so the
+# audio tail isn't clipped by the next move's play_sound.
+play_medley() {
+  local dataset="$1" count="$2"; shift 2
+  local pool=("$@") pick i
+  for _ in $(seq 1 "$count"); do
+    wait_move_done                 # don't fire into a running move (would be dropped)
+    pick=${pool[$((RANDOM % ${#pool[@]}))]}
+    play_move "$dataset" "$pick"
+    # Confirm it started (retry once if the app grabbed the robot first).
+    for i in 1 2 3; do
+      n=$(curl -sS --max-time 4 "${BASE}/api/move/running" 2>/dev/null | \
+        python3 -c "import sys,json; print(len(json.load(sys.stdin) or []))" 2>/dev/null || echo 0)
+      [ "$n" != "0" ] && break
+      sleep 0.5
+      [ "$i" = 3 ] && play_move "$dataset" "$pick"   # one retry
+    done
+    wait_move_done                 # let motion finish
+    sleep 1                        # breath so the audio tail isn't cut
+  done
 }
 
 case "${1:-}" in
@@ -52,6 +126,65 @@ case "${1:-}" in
     [ -z "$text" ] && exit 0
     exec "${HERE}/say-reachy.sh" "$text"
     ;;
+  whisper)
+    shift
+    [ $# -eq 0 ] && { echo "usage: reachy whisper \"text\""; exit 2; }
+    exec env VOICE=Whisper "${HERE}/say-reachy.sh" "$@"
+    ;;
+  whisper-prompt)
+    # AppleScript dialog for the SwiftBar menu item.
+    text=$(osascript -e 'try
+      text returned of (display dialog "Whisper what to Reachy?" default answer "" with title "Reachy — Whisper" buttons {"Cancel","Whisper"} default button "Whisper")
+    on error
+      return ""
+    end try' 2>/dev/null || true)
+    [ -z "$text" ] && exit 0
+    exec env VOICE=Whisper "${HERE}/say-reachy.sh" "$text"
+    ;;
+  dance)
+    play_move "$DANCES" "${DANCE_MOVES[$((RANDOM % ${#DANCE_MOVES[@]}))]}"
+    echo "dancing"
+    ;;
+  dance-long)
+    echo "dancing (long routine)…"
+    play_medley "$DANCES" 5 "${DANCE_MOVES[@]}"
+    echo "done"
+    ;;
+  waddle)
+    play_move "$DANCES" "side_to_side_sway"
+    echo "waddling"
+    ;;
+  sing)
+    echo "singing…"
+    play_medley "$EMOTIONS" 3 "${SING_MOVES[@]}"
+    echo "done"
+    ;;
+  sing-long)
+    echo "singing (long medley)…"
+    play_medley "$EMOTIONS" 8 "${SING_MOVES[@]}"
+    echo "done"
+    ;;
+  stayin-alive)
+    # dance2 is Reachy's whistled "Stayin' Alive" (motion + audio).
+    play_move "$EMOTIONS" "dance2"
+    echo "🕺 Stayin' Alive"
+    ;;
+  kill-bill)
+    # dance3 is Reachy's whistled "Kill Bill" (motion + audio).
+    play_move "$EMOTIONS" "dance3"
+    echo "🔪 Kill Bill"
+    ;;
+  emotion)
+    name="${2:-}"
+    [ -z "$name" ] && name="${SING_MOVES[$((RANDOM % ${#SING_MOVES[@]}))]}"
+    play_move "$EMOTIONS" "$name"
+    echo "emotion: $name"
+    ;;
+  happy)
+    exec "${HERE}/reachy-happy-toggle.sh" "${2:-toggle}"
+    ;;
+  test|selftest)
+    exec "${HERE}/reachy-selftest.sh" ;;
   status)
     pitch=$(curl -sS --max-time 5 "${BASE}/api/state/present_head_pose" | \
       python3 -c "import sys,json,math; d=json.load(sys.stdin); print(round(math.degrees(d['pitch']),1))")

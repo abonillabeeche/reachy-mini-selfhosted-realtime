@@ -84,6 +84,13 @@ for p in $ALL_PROFILES; do
   _emit_prof "$p"
 done
 
+# --- Happy Mode (silent background moves) state ---
+HAPPY_TOGGLE="${HOME}/bin/reachy-happy-toggle"
+HAPPY_ON=0
+if [ -x "$HAPPY_TOGGLE" ] && "$HAPPY_TOGGLE" status 2>/dev/null | grep -q on; then
+  HAPPY_ON=1
+fi
+
 # --- Compose menu-bar title: posture + mic-live indicator ---
 # pitch > 15° ≈ asleep (head folded down)
 if python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > 15 else 1)" "$PITCH" 2>/dev/null; then
@@ -91,6 +98,7 @@ if python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > 15 else 1)" "$PITC
 else
   icon="🤖"
 fi
+[ "$HAPPY_ON" = "1" ] && icon="✨"       # happy mode active
 [ "$MIC_STATE" = "[on]" ] && icon="🔴"   # mic hot — overrides
 echo "${icon} Reachy"
 
@@ -123,6 +131,24 @@ $(
 🌙 Sleep | bash="${REACHY_CLI}" param1="sleep" refresh=true terminal=false
 ---
 🗣 Speak | bash="${REACHY_CLI}" param1="say-prompt" refresh=true terminal=false
+🤫 Whisper… | bash="${REACHY_CLI}" param1="whisper-prompt" refresh=true terminal=false
+---
+🎪 Actions | color=gray
+--🪩 Dance | bash="${REACHY_CLI}" param1="dance" refresh=false terminal=false
+--🎉 Dance (long) | bash="${REACHY_CLI}" param1="dance-long" refresh=false terminal=false
+--🐧 Waddle | bash="${REACHY_CLI}" param1="waddle" refresh=false terminal=false
+--🎵 Sing | bash="${REACHY_CLI}" param1="sing" refresh=false terminal=false
+--🎶 Sing (longer) | bash="${REACHY_CLI}" param1="sing-long" refresh=false terminal=false
+--🕺 Whistle: Stayin' Alive | bash="${REACHY_CLI}" param1="stayin-alive" refresh=false terminal=false
+--🔪 Whistle: Kill Bill | bash="${REACHY_CLI}" param1="kill-bill" refresh=false terminal=false
+--😊 Emotion (random) | bash="${REACHY_CLI}" param1="emotion" refresh=false terminal=false
+$(
+  if [ "$HAPPY_ON" = "1" ]; then
+    echo "✨ Stop Happy Mode | bash=\"${HAPPY_TOGGLE}\" param1=\"stop\" refresh=true terminal=false color=orange"
+  else
+    echo "✨ Start Happy Mode (quiet random moves) | bash=\"${HAPPY_TOGGLE}\" param1=\"start\" refresh=true terminal=false"
+  fi
+)
 ---
 $(
   LISTEN_TOGGLE="${HOME}/bin/reachy-listen-toggle"
