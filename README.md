@@ -76,6 +76,8 @@ Then talk to Reachy.
 - **A Reachy Mini Wireless** with its stock software, reachable over WiFi.
 - On your control machine: `kubectl`, `ssh`, `sshpass`, `nerdctl` (or docker)
   on the node, and `gh` if you want to fork this repo.
+- For the Mac control suite (optional): `sshpass`, `sox`, SwiftBar, and
+  Hammerspoon. See [docs/08-mac-controls.md](docs/08-mac-controls.md).
 
 ## Repository map
 
@@ -88,7 +90,7 @@ Then talk to Reachy.
 | [`robot/patches/`](robot/patches/) | `app_lifecycle-slow-wake.patch` — replace the choreographed `wake_up()` (fast, plays toudoum, wiggles 20°) with a smooth 5-second goto. |
 | [`robot/systemd/`](robot/systemd/) | Drop-in template for the reachy-mini-daemon unit that points the app at your s2s + VLM. |
 | [`robot/install.sh`](robot/install.sh) | Idempotent one-shot installer that pushes all robot-side files. |
-| [`mac/say-reachy.sh`](mac/say-reachy.sh) | Speak arbitrary text through Reachy's speaker from a Mac. Handy for debugging without the whole voice loop. |
+| [`mac/`](mac/) | Mac control suite: the `reachy` CLI (wake/sleep, dance/sing/waddle/whistle, say/whisper, Happy Mode, mic, profiles, live mic/camera), the SwiftBar menu-bar widget, and `reachy test` self-test. See [docs/08-mac-controls.md](docs/08-mac-controls.md). |
 
 ## Documentation
 
@@ -99,6 +101,7 @@ Then talk to Reachy.
 - [Building the fast-start image](docs/05-image-build.md)
 - [Persistence & storage](docs/06-persistence.md)
 - [Troubleshooting](docs/07-troubleshooting.md) — every pitfall found while building this
+- [Mac controls](docs/08-mac-controls.md) — the `reachy` CLI, SwiftBar widget, and self-test
 
 ## Known behaviours / open items
 
