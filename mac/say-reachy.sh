@@ -5,7 +5,8 @@
 #        VOICE=Alex ./say-reachy.sh "hi there"
 set -euo pipefail
 
-ROBOT="${ROBOT:-10.0.0.20:8000}"
+# Prefer ROBOT (host:port); otherwise derive from ROBOT_IP (set in ~/.config/reachy/env).
+ROBOT="${ROBOT:-${ROBOT_IP:-10.0.0.20}:8000}"
 VOICE="${VOICE:-Samantha}"
 TEXT="${*:-hello from your Mac}"
 
