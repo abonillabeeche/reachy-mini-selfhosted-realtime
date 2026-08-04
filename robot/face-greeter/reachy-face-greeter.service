@@ -1,0 +1,22 @@
+[Unit]
+Description=Reachy Face Greeter (recognize familiar faces + greet)
+After=reachy-mini-daemon.service network-online.target
+Wants=reachy-mini-daemon.service
+
+[Service]
+Type=simple
+User=pollen
+# SCHED_IDLE: the greeter only gets CPU the daemon isn't using, so face
+# tracking / motor loops are never preempted by recognition on the 4-core Pi.
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+# give the daemon time to bring up media/camera after boot
+ExecStartPre=/bin/sleep 20
+ExecStart=/home/pollen/reachy-face/run-greeter.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
