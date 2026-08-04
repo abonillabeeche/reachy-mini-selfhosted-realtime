@@ -17,6 +17,7 @@
 #   reachy stayin-alive      # whistle "Stayin' Alive" (with the dance)
 #   reachy kill-bill         # whistle "Kill Bill" (with the dance)
 #   reachy emotion [name]    # play an emotion (motion + her own audio); random if none
+#   reachy stop              # stop the current move
 #   reachy happy [start|stop|toggle|status]  # silent random background moves (~10-20s)
 #   reachy test              # run the self-test suite (motion + audio + happy)
 #   reachy status            # print motors + head pose + running app
@@ -58,7 +59,7 @@ SING_MOVES=(
 )
 
 usage() {
-  sed -n '3,27p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,28p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
@@ -179,6 +180,17 @@ case "${1:-}" in
     [ -z "$name" ] && name="${SING_MOVES[$((RANDOM % ${#SING_MOVES[@]}))]}"
     play_move "$EMOTIONS" "$name"
     echo "emotion: $name"
+    ;;
+  stop)
+    # Stop whatever move is currently playing.
+    u=$(curl -sS --max-time 5 "${BASE}/api/move/running" | \
+      python3 -c "import sys,json; d=json.load(sys.stdin) or []; print(d[0]['uuid'] if d else '')" 2>/dev/null)
+    if [ -n "$u" ]; then
+      curl -sS --max-time 5 -X POST "${BASE}/api/move/stop" \
+        -H "Content-Type: application/json" -d "{\"uuid\":\"$u\"}" >/dev/null && echo "stopped"
+    else
+      echo "nothing playing"
+    fi
     ;;
   happy)
     exec "${HERE}/reachy-happy-toggle.sh" "${2:-toggle}"
