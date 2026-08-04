@@ -16,6 +16,13 @@ if ! curl -sS --max-time 5 -o /dev/null "${BASE}/api/daemon/status"; then
   echo "!! Daemon not reachable. Nothing to do."; exit 1
 fi
 
+# Face tracking + wobbling run at the daemon level (independent of the app) and
+# will keep the head active / re-engage motors, overriding goto_sleep. Turn
+# them off first so she actually stays folded.
+echo "==> Disabling face tracking + wobbling …"
+curl -sS --max-time 5 -X POST "${BASE}/api/media/tracking/disable" >/dev/null 2>&1 || true
+curl -sS --max-time 5 -X POST "${BASE}/api/media/wobbling/disable" >/dev/null 2>&1 || true
+
 APP=$(curl -sS --max-time 5 "${BASE}/api/apps/current-app-status" | \
   python3 -c "import sys,json; d=json.load(sys.stdin); print((d or {}).get('info',{}).get('name') or '')")
 
@@ -33,6 +40,17 @@ else
     sleep 3
     curl -sS --max-time 5 -X POST "${BASE}/api/motors/set_mode/disabled" >/dev/null || true
   fi
+fi
+
+# Enforce: whatever path we took, if motors are still on she didn't sleep —
+# fold to the sleep pose and disable.
+MODE=$(curl -sS --max-time 5 "${BASE}/api/motors/status" | python3 -c "import sys,json; print(json.load(sys.stdin).get('mode',''))")
+if [ "$MODE" = "enabled" ]; then
+  echo "==> Motors still on — folding to sleep pose and disabling …"
+  curl -sS --max-time 15 -X POST "${BASE}/api/move/play/goto_sleep" >/dev/null 2>&1 || true
+  sleep 3
+  curl -sS --max-time 5 -X POST "${BASE}/api/motors/set_mode/disabled" >/dev/null 2>&1 || true
+  sleep 1
 fi
 
 # Final report

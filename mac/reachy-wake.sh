@@ -43,6 +43,9 @@ else
   echo "    (Reachy's already upright, so the app's wake_up_if_sleeping is a no-op.)"
 fi
 
+echo "==> Re-enabling face tracking (so she follows faces while awake) …"
+curl -sS --max-time 5 -X POST "${BASE}/api/media/tracking/enable" >/dev/null 2>&1 || true
+
 sleep 2
 PITCH=$(curl -sS --max-time 5 "${BASE}/api/state/present_head_pose" | \
   python3 -c "import sys,json,math; d=json.load(sys.stdin); print(round(math.degrees(d['pitch']),1))")
