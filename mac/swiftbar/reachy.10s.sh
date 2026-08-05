@@ -134,14 +134,14 @@ $(
 🤫 Whisper… | bash="${REACHY_CLI}" param1="whisper-prompt" refresh=true terminal=false
 ---
 🎪 Actions | color=gray
---🪩 Dance | bash="${REACHY_CLI}" param1="dance" refresh=false terminal=false
---🎉 Dance (long) | bash="${REACHY_CLI}" param1="dance-long" refresh=false terminal=false
---🐧 Waddle | bash="${REACHY_CLI}" param1="waddle" refresh=false terminal=false
---🎵 Sing | bash="${REACHY_CLI}" param1="sing" refresh=false terminal=false
---🎶 Sing (longer) | bash="${REACHY_CLI}" param1="sing-long" refresh=false terminal=false
---🕺 Whistle: Stayin' Alive | bash="${REACHY_CLI}" param1="stayin-alive" refresh=false terminal=false
---🔪 Whistle: Kill Bill | bash="${REACHY_CLI}" param1="kill-bill" refresh=false terminal=false
---😊 Emotion (random) | bash="${REACHY_CLI}" param1="emotion" refresh=false terminal=false
+--🪩 Dance | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} dance >/dev/null 2>&1 &" refresh=false terminal=false
+--🎉 Dance (long) | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} dance-long >/dev/null 2>&1 &" refresh=false terminal=false
+--🐧 Waddle | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} waddle >/dev/null 2>&1 &" refresh=false terminal=false
+--🎵 Sing | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} sing >/dev/null 2>&1 &" refresh=false terminal=false
+--🎶 Sing (longer) | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} sing-long >/dev/null 2>&1 &" refresh=false terminal=false
+--🕺 Whistle: Stayin' Alive | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} stayin-alive >/dev/null 2>&1 &" refresh=false terminal=false
+--🔪 Whistle: Kill Bill | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} kill-bill >/dev/null 2>&1 &" refresh=false terminal=false
+--😊 Emotion (random) | bash="/bin/bash" param1="-c" param2="nohup ${REACHY_CLI} emotion >/dev/null 2>&1 &" refresh=false terminal=false
 $(
   if [ "$HAPPY_ON" = "1" ]; then
     echo "✨ Stop Happy Mode | bash=\"${HAPPY_TOGGLE}\" param1=\"stop\" refresh=true terminal=false color=orange"
