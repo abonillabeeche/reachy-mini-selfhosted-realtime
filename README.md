@@ -102,6 +102,7 @@ Then talk to Reachy.
 - [Persistence & storage](docs/06-persistence.md)
 - [Troubleshooting](docs/07-troubleshooting.md) — every pitfall found while building this
 - [Mac controls](docs/08-mac-controls.md) — the `reachy` CLI, SwiftBar widget, and self-test
+- [Infrastructure & runbook](docs/09-infrastructure-and-runbook.md) — **all the nodes**, current state, what changed, and recovery procedures (read first)
 
 ## Known behaviours / open items
 
