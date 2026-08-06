@@ -26,7 +26,7 @@ Reachy (10.0.0.154)  ── ws://10.0.0.12:31765/v1/realtime ──►  s2s pod 
 ```
 
 ## Current software state (as of last update)
-- **Robot:** `reachy_mini` SDK **1.9.0**; conversation app **0.9.0** (rolled back — see below). Active profile **upbeat**, voice **af_nova** (Kokoro allowlist patched into `config.py`).
+- **Robot:** `reachy_mini` SDK **1.9.0**; conversation app **0.9.0** (rolled back — see below). Active profile **upbeat**, voice **af_heart** (Kokoro; allowlist `af_heart`/`af_nova`/`af_bella` patched into `config.py`). Voice is set in `startup_settings.json`.
 - **s2s:** **0.2.12** with **Smart Turn v3.2** (endpointing: ~600 ms think-pause tolerance, 800 ms speculative, turn revision). Installed in the pod's persistent `/pip-site` (hostPath `/opt/reachy-s2s/pip-site`), launched by the `s2s-entrypoint` ConfigMap's `run.sh`. LLM = Ollama `qwen2.5:14b`.
 - **Face tracking:** enabled (she follows faces). **Face greeter:** built but **disabled** (see `robot/face-greeter/`).
 
@@ -43,6 +43,8 @@ Reachy (10.0.0.154)  ── ws://10.0.0.12:31765/v1/realtime ──►  s2s pod 
 - **Camera dark / app crashes after `listen`/`see`/`open-control`** → media released; the `:8443` pipeline only runs while media is acquired. `POST /api/media/acquire`.
 - **App errors on start: `Profile '…' has no profile.md`** → v1.0.0 running against old-format profile. (You're likely on v1.0.0 without SDK 1.10 — roll back or update FW.)
 - **Speak/Whisper silent** → `say-reachy.sh` targets `$ROBOT`/`ROBOT_IP`; ensure `~/.config/reachy/env` has the right IP.
+- **Audio seems to come from the built-in speaker after a reboot** → the external USB DAC (`Audio_1`) volume resets on reboot (and the card index can shift, e.g. 3→1; the `~/.asoundrc` sink targets it by name so routing is fine). Restore with `reachy volume 90`. Routing is `reachymini_audio_sink` → `hw:CARD=Audio_1` in `~/.asoundrc`; verify with `speaker-test -D reachymini_audio_sink`.
+- **Change her voice** → edit `voice` in the app's `startup_settings.json` to a Kokoro voice in the `config.py` allowlist (e.g. `af_heart`), then `POST /api/apps/restart-current-app`. Heard only in live conversation (not via `reachy say`).
 - **s2s changes** → rebuild by bumping the install marker or `pip install --user --upgrade` s2s in the pod's `/pip-site`, then `kubectl -n reachy-s2s rollout restart deploy/reachy-s2s` (on node 10.0.0.12).
 - Quick health: **`reachy test`** (Mac) exercises motion + audio + happy mode end-to-end.
 
